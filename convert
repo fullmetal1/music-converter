@@ -1,0 +1,17 @@
+#!/bin/bash
+
+export FROMPATH=$1
+export TOPATH=$2
+export BITRATE=$3
+export RED='\033[0;31m'
+
+if (( $# != 3 )); then
+	echo "Format is as follows: convert [source directory] [destination directory] [bitrate]"
+	exit 0
+fi
+
+find $FROMPATH -name "*.flac" -exec sh -c '
+FILE="$TOPATH$(echo "${1%.*}" | sed "s@$FROMPATH@@").opus"
+mkdir -p "$(dirname "$FILE")"
+ffmpeg -n -v 0 -i "$1" -b:a $BITRATE "$FILE" && echo "$FILE transcoded" || tput setaf 1; echo "WARNING: $FILE not transcoded."; tput setaf 7
+' _ {} \;
