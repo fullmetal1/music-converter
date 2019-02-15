@@ -11,8 +11,24 @@ if (( $# != 3 )); then
 	exit 0
 fi
 
-find $FROMPATH -type f -exec sh -c '
+find "$FROMPATH" -type f -print0 | xargs -0 -I{} --max-procs=$(($(nproc)*2)) bash -c \
+'
 FILE="$TOPATH$(echo "${1%.*}" | sed "s@$FROMPATH@@").opus"
 mkdir -p "$(dirname "$FILE")"
+if [ -e "$FILE" ]; then
+	if [ "$1" -nt "$FILE" ]; then
+		rm "$FILE"
+	fi
+fi
 ffmpeg -n -v 0 -i "$1" -b:a $BITRATE "$FILE" && echo "$FILE transcoded" || echo -e "$RED WARNING: $FILE not transcoded.$NC"
-' _ {} \;
+' -- {}
+
+find "$TOPATH" -type f -print0 | xargs -0 -I{} --max-procs=$(($(nproc)*2)) bash -c \
+'
+FILE="$FROMPATH$(echo "${1%.*}" | sed "s@$TOPATH@@").flac"
+if [ ! -e "$FILE" ]; then
+	rm "$1"
+fi
+' -- {}
+
+
