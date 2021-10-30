@@ -13,22 +13,25 @@ fi
 
 find "$FROMPATH" -type f -print0 | xargs -0 -I{} --max-procs=$(($(nproc)*2)) bash -c \
 '
-FILE="$TOPATH$(echo "${1%.*}" | sed "s@$FROMPATH@@").opus"
-mkdir -p "$(dirname "$FILE")"
-if [ -e "$FILE" ]; then
-	if [ "$1" -nt "$FILE" ]; then
-		rm "$FILE"
-	fi
+FROMFILE=$1
+TOFILE="$TOPATH$(echo "${1%.*}" | sed "s@$FROMPATH@@").opus"
+mkdir -p "$(dirname "$TOFILE")"
+if [ -e "$TOFILE" -a "$FROMFILE" -nt "$TOFILE" ]; then
+	rm "$TOFILE"
 fi
-ffmpeg -n -v 0 -i "$1" -b:a $BITRATE "$FILE" && echo "$FILE transcoded" || echo -e "$RED WARNING: $FILE not transcoded.$NC"
+if [ "$FROMFILE" -nt "$TOFILE" -o ! -e "$TOFILE" ]; then
+	ffmpeg -n -v 0 -i "$FROMFILE" -b:a $BITRATE "$TOFILE" && echo "Transcoded $TOFILE" || echo -e "$RED WARNING: $TOFILE not transcoded.$NC"
+else
+	echo "Skipped $TOFILE"
+fi
 ' -- {}
 
 find "$TOPATH" -type f -print0 | xargs -0 -I{} --max-procs=$(($(nproc)*2)) bash -c \
 '
-FILE="$FROMPATH$(echo "${1%.*}" | sed "s@$TOPATH@@").flac"
-if [ ! -e "$FILE" ]; then
+FILE="$FROMPATH$(echo "${1%.*}" | sed "s@$TOPATH@@")."
+if [ "$(ls "$FILE"*)" == "" ]; then
 	rm "$1"
 fi
 ' -- {}
 
-
+find "$TOPATH" -empty -exec rm -rf {} \;
